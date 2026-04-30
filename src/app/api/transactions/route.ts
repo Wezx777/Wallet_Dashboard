@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Chain, Transaction, TxType, Wallet } from '@/types';
-import { CHAIN_CONFIG, getExplorerTxUrl, isEvmChain } from '@/lib/chains';
+import { CHAIN_CONFIG, getExplorerTxUrl, isEtherscanChain } from '@/lib/chains';
 import { getTransactions, getERC20Transfers } from '@/lib/etherscan';
 import { getSolanaSignatures, getSolanaTransactionsBatch } from '@/lib/alchemy';
 import { getJupiterTokenMap } from '@/lib/jupiterTokens';
@@ -188,9 +188,13 @@ export async function POST(req: NextRequest) {
     const { wallets }: { wallets: Wallet[] } = await req.json();
     if (!wallets?.length) return NextResponse.json([], { status: 200 });
 
-    const txPromises = wallets.map(w =>
-      isEvmChain(w.chain) ? fetchEvmTransactions(w) : fetchSolanaTransactions(w)
-    );
+    const txPromises = wallets.map(w => {
+      if (w.chain === 'solana') return fetchSolanaTransactions(w);
+      if (isEtherscanChain(w.chain)) return fetchEvmTransactions(w);
+      // Alchemy EVM chains and Tron: Etherscan V2 free tier doesn't cover them;
+      // return empty — transaction history will be added when APIs are available.
+      return Promise.resolve([] as Transaction[]);
+    });
 
     const results = await Promise.all(txPromises);
     const all = results.flat().sort((a, b) => b.timestamp - a.timestamp);

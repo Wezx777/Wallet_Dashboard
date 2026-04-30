@@ -2,11 +2,19 @@
 
 import { useState } from 'react';
 import { Copy, ExternalLink, Trash2, CheckCheck, Eye } from 'lucide-react';
-import { Wallet } from '@/types';
+import { Wallet, WalletCategory } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { formatCurrency, formatNumber, shortenAddress } from '@/lib/utils';
 import { CHAIN_CONFIG, getExplorerAddressUrl } from '@/lib/chains';
 import { PriceChange } from '@/components/ui/PriceChange';
+
+const CATEGORY_BADGE: Record<WalletCategory, { icon: string; label: string; cls: string }> = {
+  cold:     { icon: '🔒', label: 'Cold Wallet', cls: 'bg-blue-500/10 text-blue-400' },
+  hot:      { icon: '📱', label: 'Hot Wallet',  cls: 'bg-orange-500/10 text-orange-400' },
+  exchange: { icon: '🏦', label: 'Exchange',    cls: 'bg-yellow-500/10 text-yellow-400' },
+  dex:      { icon: '🔄', label: 'DEX / DeFi', cls: 'bg-purple-500/10 text-purple-400' },
+  other:    { icon: '📁', label: 'Outro',       cls: 'bg-zinc-500/10 text-zinc-400' },
+};
 
 interface Props {
   wallet: Wallet;
@@ -48,13 +56,21 @@ export function WalletCard({ wallet }: Props) {
           </div>
           <div>
             <p className="font-semibold text-white">{wallet.name}</p>
-            <div className="flex items-center gap-1.5 mt-0.5">
+            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
               <span
                 className="text-xs px-1.5 py-0.5 rounded-full font-medium"
                 style={{ backgroundColor: `${cfg.color}20`, color: cfg.color }}
               >
                 {cfg.name}
               </span>
+              {wallet.category && CATEGORY_BADGE[wallet.category] && (() => {
+                const badge = CATEGORY_BADGE[wallet.category!]!;
+                return (
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${badge.cls}`}>
+                    {badge.icon} {badge.label}
+                  </span>
+                );
+              })()}
             </div>
           </div>
         </div>

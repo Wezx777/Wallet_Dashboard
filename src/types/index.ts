@@ -1,13 +1,15 @@
-export type Chain = 'ethereum' | 'solana' | 'bsc' | 'base';
+export type Chain = 'ethereum' | 'solana' | 'bsc' | 'base' | 'polygon' | 'arbitrum' | 'optimism' | 'avalanche' | 'tron';
 export type Currency = 'USD' | 'EUR';
 export type Section = 'overview' | 'wallets' | 'tokens' | 'transactions';
 export type TxType = 'send' | 'receive' | 'swap' | 'contract' | 'topup';
+export type WalletCategory = 'cold' | 'hot' | 'exchange' | 'dex' | 'other';
 
 export interface Wallet {
   id: string;
   address: string;
   name: string;
   chain: Chain;
+  category?: WalletCategory;
   createdAt: number;
 }
 

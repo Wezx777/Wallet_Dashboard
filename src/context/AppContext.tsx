@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
-import { Wallet, PortfolioData, Transaction, Currency, Section, Chain } from '@/types';
+import { Wallet, PortfolioData, Transaction, Currency, Section, Chain, WalletCategory } from '@/types';
 import { generateId } from '@/lib/utils';
 import { detectChain } from '@/lib/chains';
 
@@ -62,7 +62,7 @@ const initialState: AppState = {
 };
 
 interface AppContextValue extends AppState {
-  addWallet: (address: string, name: string, chain: Chain) => void;
+  addWallet: (address: string, name: string, chain: Chain, category?: WalletCategory) => void;
   removeWallet: (id: string) => void;
   refreshPortfolio: () => Promise<void>;
   refreshTransactions: () => Promise<void>;
@@ -156,12 +156,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, [state.wallets, refreshPortfolio]);
 
-  const addWallet = useCallback((address: string, name: string, chain: Chain) => {
+  const addWallet = useCallback((address: string, name: string, chain: Chain, category?: WalletCategory) => {
     const wallet: Wallet = {
       id: generateId(),
       address: address.trim(),
       name: name.trim() || `Wallet ${state.wallets.length + 1}`,
       chain,
+      category,
       createdAt: Date.now(),
     };
     dispatch({ type: 'ADD_WALLET', payload: wallet });

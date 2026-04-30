@@ -6,14 +6,8 @@ import { formatCurrency, formatNumber } from '@/lib/utils';
 import { PriceChange } from '@/components/ui/PriceChange';
 import { SkeletonCard } from '@/components/ui/SkeletonCard';
 import { CHAIN_CONFIG } from '@/lib/chains';
-import { Chain } from '@/types';
 
-const CHAIN_EMOJIS: Record<Chain, string> = {
-  ethereum: '◆',
-  bsc: '●',
-  base: '■',
-  solana: '◉',
-};
+// Icons are now in CHAIN_CONFIG.icon — no separate map needed
 
 export function ChainBalances() {
   const { portfolio, currency, loading, wallets } = useApp();
@@ -55,7 +49,7 @@ export function ChainBalances() {
                     className="w-8 h-8 rounded-xl flex items-center justify-center text-base font-bold"
                     style={{ backgroundColor: `${chain.color}20`, color: chain.color }}
                   >
-                    {CHAIN_EMOJIS[chain.chain]}
+                    {CHAIN_CONFIG[chain.chain].icon}
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-white">{chain.name}</p>

@@ -7,10 +7,15 @@ export interface DexTokenData {
 }
 
 const CHAIN_MAP: Record<string, string> = {
-  ethereum: 'ethereum',
-  bsc: 'bsc',
-  base: 'base',
-  solana: 'solana',
+  ethereum:  'ethereum',
+  bsc:       'bsc',
+  base:      'base',
+  solana:    'solana',
+  polygon:   'polygon',
+  arbitrum:  'arbitrum',
+  optimism:  'optimism',
+  avalanche: 'avalanche',
+  tron:      'tron',
 };
 
 // Batch query DexScreener for token metadata + prices.
