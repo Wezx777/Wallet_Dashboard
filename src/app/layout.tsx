@@ -1,15 +1,20 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { AuthProvider } from '@/context/AuthContext';
 
 export const metadata: Metadata = {
-  title: 'Crypto Dashboard',
-  description: 'Track your crypto portfolio across Ethereum, Solana, BNB Chain and Base',
+  title: 'Wallet Dashboard',
+  description: 'Your all-in-one crypto portfolio tracker — multi-chain, real-time',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

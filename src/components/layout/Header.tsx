@@ -1,10 +1,13 @@
 'use client';
 
-import { RefreshCw, DollarSign, Euro, Plus, Wifi, WifiOff } from 'lucide-react';
+import { RefreshCw, DollarSign, Euro, Plus, Wifi, LogOut, User } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useRouter } from 'next/navigation';
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
-import { formatRelativeTime } from '@/lib/utils';
+import { formatRelativeTime, shortenAddress } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
 
 interface HeaderProps {
   onAddWallet: () => void;
@@ -12,11 +15,27 @@ interface HeaderProps {
 
 export function Header({ onAddWallet }: HeaderProps) {
   const { loading, currency, setCurrency, refreshPortfolio, refreshTransactions, lastUpdated, wallets } = useApp();
+  const { user } = useAuth();
+  const router = useRouter();
 
   const handleRefresh = () => {
     refreshPortfolio();
     refreshTransactions();
   };
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push('/login');
+    router.refresh();
+  };
+
+  const displayName = (() => {
+    if (!user) return null;
+    const walletAddress = user.user_metadata?.wallet_address as string | undefined;
+    if (walletAddress) return shortenAddress(walletAddress);
+    return user.email ?? null;
+  })();
 
   return (
     <header className="h-16 border-b border-border bg-bg-primary/80 backdrop-blur-sm sticky top-0 z-30 flex items-center justify-between px-4 md:px-6 gap-4">
@@ -85,6 +104,26 @@ export function Header({ onAddWallet }: HeaderProps) {
         >
           <span className="hidden sm:inline">Add Wallet</span>
         </Button>
+
+        {/* User menu */}
+        {displayName && (
+          <div className="hidden sm:flex items-center gap-1.5 pl-2 border-l border-border">
+            <span className="flex items-center gap-1.5 text-xs text-muted">
+              <User size={13} />
+              <span className="max-w-[120px] truncate">{displayName}</span>
+            </span>
+          </div>
+        )}
+
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          title="Logout"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-muted hover:text-danger hover:bg-danger/10 transition-colors text-xs font-medium"
+        >
+          <LogOut size={14} />
+          <span className="hidden sm:inline">Logout</span>
+        </button>
       </div>
     </header>
   );

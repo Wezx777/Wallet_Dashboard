@@ -2,8 +2,8 @@
 
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import { Wallet, PortfolioData, Transaction, Currency, Section, Chain, WalletCategory } from '@/types';
-import { generateId } from '@/lib/utils';
-import { detectChain } from '@/lib/chains';
+import { createClient } from '@/lib/supabase/client';
+import type { Session, AuthChangeEvent } from '@supabase/supabase-js';
 
 interface AppState {
   wallets: Wallet[];
@@ -73,30 +73,59 @@ interface AppContextValue extends AppState {
 
 const AppContext = createContext<AppContextValue | null>(null);
 
-const STORAGE_KEY = 'wallet-dashboard-wallets';
 const REFRESH_INTERVAL = 60_000;
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const supabase = createClient();
+  const userIdRef = useRef<string | null>(null);
 
-  // Load wallets from localStorage on mount
+  // Track auth state and load wallets from Supabase
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const wallets: Wallet[] = JSON.parse(stored);
-        dispatch({ type: 'SET_WALLETS', payload: wallets });
+    supabase.auth.getUser().then(({ data }: { data: { user: { id: string } | null } }) => {
+      const uid = data.user?.id ?? null;
+      userIdRef.current = uid;
+      if (uid) loadWallets(uid);
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+      const uid = session?.user?.id ?? null;
+      userIdRef.current = uid;
+      if (uid) {
+        loadWallets(uid);
+      } else {
+        dispatch({ type: 'SET_WALLETS', payload: [] });
       }
-    } catch {}
-  }, []);
+    });
 
-  // Persist wallets to localStorage
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.wallets));
-    } catch {}
-  }, [state.wallets]);
+    return () => listener.subscription.unsubscribe();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadWallets = async (uid: string) => {
+    const { data, error } = await supabase
+      .from('wallets')
+      .select('*')
+      .eq('user_id', uid)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Failed to load wallets:', error);
+      return;
+    }
+
+    type WalletRow = { id: string; address: string; name: string; chain: string; category: string; created_at: string };
+    const wallets: Wallet[] = (data ?? []).map((w: WalletRow) => ({
+      id: w.id,
+      address: w.address,
+      name: w.name,
+      chain: w.chain as Chain,
+      category: w.category as WalletCategory | undefined,
+      createdAt: new Date(w.created_at).getTime(),
+    }));
+
+    dispatch({ type: 'SET_WALLETS', payload: wallets });
+  };
 
   const refreshPortfolio = useCallback(async () => {
     if (!state.wallets.length) return;
@@ -157,20 +186,44 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [state.wallets, refreshPortfolio]);
 
   const addWallet = useCallback((address: string, name: string, chain: Chain, category?: WalletCategory) => {
+    const uid = userIdRef.current;
+    if (!uid) return;
+
+    const id = crypto.randomUUID();
     const wallet: Wallet = {
-      id: generateId(),
+      id,
       address: address.trim(),
       name: name.trim() || `Wallet ${state.wallets.length + 1}`,
       chain,
       category,
       createdAt: Date.now(),
     };
+
+    // Optimistic update
     dispatch({ type: 'ADD_WALLET', payload: wallet });
-  }, [state.wallets.length]);
+
+    // Persist to Supabase
+    supabase.from('wallets').insert({
+      id,
+      user_id: uid,
+      address: wallet.address,
+      name: wallet.name,
+      chain: wallet.chain,
+      category: wallet.category ?? 'hot',
+    }).then(({ error }: { error: unknown }) => {
+      if (error) console.error('Failed to save wallet:', error);
+    });
+  }, [state.wallets.length, supabase]);
 
   const removeWallet = useCallback((id: string) => {
+    const uid = userIdRef.current;
     dispatch({ type: 'REMOVE_WALLET', payload: id });
-  }, []);
+    if (uid) {
+      supabase.from('wallets').delete().eq('id', id).eq('user_id', uid).then(({ error }: { error: unknown }) => {
+        if (error) console.error('Failed to delete wallet:', error);
+      });
+    }
+  }, [supabase]);
 
   const setCurrency = useCallback((c: Currency) => dispatch({ type: 'SET_CURRENCY', payload: c }), []);
   const setSection = useCallback((s: Section) => dispatch({ type: 'SET_SECTION', payload: s }), []);
