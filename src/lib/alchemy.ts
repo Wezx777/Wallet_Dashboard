@@ -1,21 +1,49 @@
-const API_KEY = process.env.ALCHEMY_API_KEY!;
-const SOLANA_URL = `https://solana-mainnet.g.alchemy.com/v2/${API_KEY}`;
+const API_KEY = process.env.ALCHEMY_API_KEY || '';
+const SOLANA_ALCHEMY = API_KEY ? `https://solana-mainnet.g.alchemy.com/v2/${API_KEY}` : '';
+
+// Public Solana RPCs — reliable from Vercel/cloud environments
+const SOLANA_FALLBACK_RPCS = [
+  'https://api.mainnet-beta.solana.com',
+  'https://solana-rpc.publicnode.com',
+];
 
 let _reqId = 1;
 
+async function fetchWithTimeout(url: string, body: string, ms = 7000): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 async function rpc<T>(method: string, params: unknown[]): Promise<T> {
   const id = _reqId++;
-  const res = await fetch(SOLANA_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id, method, params }),
-    next: { revalidate: 60 },
-  });
+  const body = JSON.stringify({ jsonrpc: '2.0', id, method, params });
+  const urls = SOLANA_ALCHEMY ? [SOLANA_ALCHEMY, ...SOLANA_FALLBACK_RPCS] : SOLANA_FALLBACK_RPCS;
 
-  if (!res.ok) throw new Error(`Alchemy HTTP error: ${res.status}`);
-  const data = await res.json();
-  if (data.error) throw new Error(`Alchemy RPC error: ${data.error.message}`);
-  return data.result as T;
+  let lastErr: unknown;
+  for (const url of urls) {
+    try {
+      const res = await fetchWithTimeout(url, body);
+      if (!res.ok) throw new Error(`Solana HTTP ${res.status} from ${url}`);
+      const data = await res.json();
+      if (data.error) throw new Error(`Solana RPC error: ${data.error.message}`);
+      return data.result as T;
+    } catch (err) {
+      lastErr = err;
+      // try next RPC
+    }
+  }
+  console.error('[alchemy/solana] all RPCs failed for', method, lastErr instanceof Error ? lastErr.message : lastErr);
+  throw lastErr;
 }
 
 export async function getSolanaBalance(address: string): Promise<number> {
@@ -114,25 +142,28 @@ export async function getSolanaTransaction(signature: string): Promise<SolanaTra
 export async function getSolanaTransactionsBatch(signatures: string[]): Promise<(SolanaTransaction | null)[]> {
   if (!signatures.length) return [];
 
-  const body = signatures.map((sig, i) => ({
-    jsonrpc: '2.0',
-    id: i + 1,
-    method: 'getTransaction',
-    params: [sig, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0, commitment: 'confirmed' }],
-  }));
+  const body = JSON.stringify(
+    signatures.map((sig, i) => ({
+      jsonrpc: '2.0',
+      id: i + 1,
+      method: 'getTransaction',
+      params: [sig, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0, commitment: 'confirmed' }],
+    }))
+  );
 
-  try {
-    const res = await fetch(SOLANA_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    const results = await res.json();
-    if (!Array.isArray(results)) return signatures.map(() => null);
-    return results
-      .sort((a, b) => a.id - b.id)
-      .map(r => r.result as SolanaTransaction | null);
-  } catch {
-    return signatures.map(() => null);
+  const urls = SOLANA_ALCHEMY ? [SOLANA_ALCHEMY, ...SOLANA_FALLBACK_RPCS] : SOLANA_FALLBACK_RPCS;
+
+  for (const url of urls) {
+    try {
+      const res = await fetchWithTimeout(url, body);
+      const results = await res.json();
+      if (!Array.isArray(results)) continue;
+      return results
+        .sort((a, b) => a.id - b.id)
+        .map(r => r.result as SolanaTransaction | null);
+    } catch {
+      // try next
+    }
   }
+  return signatures.map(() => null);
 }

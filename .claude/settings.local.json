@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s -X POST https://api.thegraph.com/subgraphs/name/pancakeswap/exchange-v3-bsc -H 'Content-Type: application/json' -d '{\"query\": \"{ _meta { block { number } } }\"}')",
+      "Bash(curl -s -X POST https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2 -H 'Content-Type: application/json' -d '{\"query\": \"{ _meta { block { number } } }\"}')",
+      "Bash(curl -sv \"https://api.thegraph.com/subgraphs/name/uniswap/uniswap-v2\")",
+      "Bash(curl *)",
+      "Bash(python -c ' *)",
+      "Bash(node_modules/.bin/tsc *)"
+    ]
+  }
+}
