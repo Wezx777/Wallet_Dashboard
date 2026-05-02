@@ -43,7 +43,7 @@ export const CHAIN_CONFIG = {
     chainId: 137,
     decimals: 18,
     explorer: 'https://polygonscan.com',
-    coingeckoId: 'matic-network',
+    coingeckoId: 'polygon-ecosystem-token',
     coingeckoPlatform: 'polygon-pos',
     color: '#8247E5',
     icon: '▲',
@@ -143,7 +143,7 @@ export function detectChain(address: string): Chain | null {
 }
 
 // Chains using Alchemy EVM RPC (not covered by free Etherscan V2)
-export const ALCHEMY_EVM_CHAINS: Chain[] = ['bsc', 'polygon', 'arbitrum', 'optimism', 'avalanche'];
+export const ALCHEMY_EVM_CHAINS: Chain[] = ['bsc', 'base', 'polygon', 'arbitrum', 'optimism', 'avalanche'];
 
 export function isEvmChain(chain: Chain): boolean {
   return chain !== 'solana' && chain !== 'tron';

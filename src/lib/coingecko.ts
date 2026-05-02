@@ -2,18 +2,26 @@ const BASE = 'https://api.coingecko.com/api/v3';
 const cache = new Map<string, { data: unknown; ts: number }>();
 const TTL = 60_000;
 
-async function cgFetch<T>(path: string): Promise<T> {
+async function cgFetch<T>(path: string, retries = 1): Promise<T> {
   const cached = cache.get(path);
   if (cached && Date.now() - cached.ts < TTL) return cached.data as T;
 
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { Accept: 'application/json' },
-    next: { revalidate: 60 },
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, {
+      headers: { Accept: 'application/json' },
+      next: { revalidate: 60 },
+      signal: ctrl.signal,
+    });
+  } finally {
+    clearTimeout(timer);
+  }
 
-  if (res.status === 429) {
+  if (res.status === 429 && retries > 0) {
     await new Promise(r => setTimeout(r, 2000));
-    return cgFetch<T>(path);
+    return cgFetch<T>(path, retries - 1);
   }
 
   if (!res.ok) throw new Error(`CoinGecko ${res.status}: ${path}`);

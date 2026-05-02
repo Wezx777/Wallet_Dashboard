@@ -1,13 +1,16 @@
-// Generic Alchemy EVM support for chains not on the Etherscan V2 free tier:
-// BNB Chain, Polygon, Arbitrum, Optimism, Avalanche.
+// Alchemy EVM support for all non-Solana, non-Tron chains.
+// Covers: Ethereum, Base, BNB, Polygon, Arbitrum, Optimism, Avalanche.
 
 import { Chain } from '@/types';
 
 const KEY = process.env.ALCHEMY_API_KEY || '';
 
+// Alchemy RPC endpoints (all EVM chains Alchemy supports)
 const ALCHEMY_RPCS: Partial<Record<Chain, string>> = KEY
   ? {
+      ethereum:  `https://eth-mainnet.g.alchemy.com/v2/${KEY}`,
       bsc:       `https://bnb-mainnet.g.alchemy.com/v2/${KEY}`,
+      base:      `https://base-mainnet.g.alchemy.com/v2/${KEY}`,
       polygon:   `https://polygon-mainnet.g.alchemy.com/v2/${KEY}`,
       arbitrum:  `https://arb-mainnet.g.alchemy.com/v2/${KEY}`,
       optimism:  `https://opt-mainnet.g.alchemy.com/v2/${KEY}`,
@@ -15,14 +18,23 @@ const ALCHEMY_RPCS: Partial<Record<Chain, string>> = KEY
     }
   : {};
 
-// Reliable public RPCs that work from Vercel/cloud environments (no BSC dataseed — blocked on cloud)
+// Reliable public RPCs for native balance fallback (no auth, cloud-friendly)
 const PUBLIC_RPCS: Partial<Record<Chain, string[]>> = {
+  ethereum: [
+    'https://cloudflare-eth.com',
+    'https://eth-rpc.publicnode.com',
+    'https://rpc.ankr.com/eth',
+  ],
   bsc: [
     'https://bsc-rpc.publicnode.com',
     'https://1rpc.io/bnb',
     'https://bsc-dataseed1.defibit.io',
     'https://bsc-dataseed2.defibit.io',
     'https://bsc-dataseed1.ninicoin.io',
+  ],
+  base: [
+    'https://mainnet.base.org',
+    'https://base-rpc.publicnode.com',
   ],
   polygon: [
     'https://polygon-rpc.com/',
@@ -33,8 +45,19 @@ const PUBLIC_RPCS: Partial<Record<Chain, string[]>> = {
     'https://api.avax.network/ext/bc/C/rpc',
     'https://avalanche-c-chain-rpc.publicnode.com',
   ],
+  arbitrum: [
+    'https://arb1.arbitrum.io/rpc',
+    'https://arbitrum-one-rpc.publicnode.com',
+    'https://1rpc.io/arb',
+  ],
+  optimism: [
+    'https://mainnet.optimism.io',
+    'https://optimism-rpc.publicnode.com',
+    'https://1rpc.io/op',
+  ],
 };
 
+// Top BEP-20 tokens for BSC fallback (when Alchemy unavailable)
 const BSC_TOP_TOKENS = [
   { address: '0x55d398326f99059fF775485246999027B3197955', symbol: 'USDT',  name: 'Tether USD',           decimals: 18 },
   { address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', symbol: 'USDC',  name: 'USD Coin',             decimals: 18 },
@@ -68,7 +91,7 @@ async function rpcCall(url: string, method: string, params: unknown[], timeoutMs
   }
 }
 
-// Try Alchemy then each public RPC in sequence; return first success.
+// Try Alchemy then public RPCs in sequence; returns first non-null result.
 async function rpcWithFallback(chain: Chain, method: string, params: unknown[]): Promise<unknown> {
   const alchemyUrl = ALCHEMY_RPCS[chain];
   const publicUrls = PUBLIC_RPCS[chain] ?? [];
@@ -103,6 +126,11 @@ export interface AlchemyTokenBalance {
   name: string;
   decimals: number;
   balance: bigint;
+}
+
+// Returns true if Alchemy is configured for this chain (key present + chain supported)
+export function isAlchemyAvailable(chain: Chain): boolean {
+  return !!KEY && !!ALCHEMY_RPCS[chain];
 }
 
 export async function getAlchemyTokenBalances(chain: Chain, walletAddress: string): Promise<AlchemyTokenBalance[]> {
@@ -144,16 +172,20 @@ export async function getAlchemyTokenBalances(chain: Chain, walletAddress: strin
             results.push(...(metas.filter(Boolean) as AlchemyTokenBalance[]));
             if (i + CHUNK < nonZero.length) await new Promise(r => setTimeout(r, 100));
           }
-          if (results.length) return results;
+          if (results.length > 0) return results;
         }
       }
+      // Alchemy responded but wallet has 0 tokens — return empty (authoritative)
+      return [];
     } catch (err) {
       console.error(`[alchemyEvm/${chain}] alchemy_getTokenBalances failed:`, err instanceof Error ? err.message : err);
     }
   }
 
-  // Fallback for BSC: check top tokens via public RPC
+  // Fallback for BSC only: check top BEP-20 tokens via public RPC
   if (chain === 'bsc') return getBscFallbackTokens(walletAddress);
+
+  // For other chains without Alchemy, no token discovery via public RPC
   return [];
 }
 
