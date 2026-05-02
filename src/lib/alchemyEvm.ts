@@ -142,12 +142,12 @@ export async function getAlchemyTokenBalances(chain: Chain, walletAddress: strin
         tokenBalances: Array<{ contractAddress: string; tokenBalance: string }>;
       };
       if (res?.tokenBalances?.length) {
-        const nonZero = res.tokenBalances.filter(
-          t => t.tokenBalance && t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000'
-        );
+        const nonZero = res.tokenBalances
+          .filter(t => t.tokenBalance && t.tokenBalance !== '0x0000000000000000000000000000000000000000000000000000000000000000')
+          .slice(0, 100); // cap at 100 tokens to stay within Vercel's timeout budget
         if (nonZero.length) {
           const results: AlchemyTokenBalance[] = [];
-          const CHUNK = 5;
+          const CHUNK = 15;
           for (let i = 0; i < nonZero.length; i += CHUNK) {
             const chunk = nonZero.slice(i, i + CHUNK);
             const metas = await Promise.all(
@@ -170,7 +170,7 @@ export async function getAlchemyTokenBalances(chain: Chain, walletAddress: strin
               })
             );
             results.push(...(metas.filter(Boolean) as AlchemyTokenBalance[]));
-            if (i + CHUNK < nonZero.length) await new Promise(r => setTimeout(r, 100));
+            if (i + CHUNK < nonZero.length) await new Promise(r => setTimeout(r, 50));
           }
           if (results.length > 0) return results;
         }

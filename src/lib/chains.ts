@@ -143,7 +143,7 @@ export function detectChain(address: string): Chain | null {
 }
 
 // Chains using Alchemy EVM RPC (not covered by free Etherscan V2)
-export const ALCHEMY_EVM_CHAINS: Chain[] = ['bsc', 'base', 'polygon', 'arbitrum', 'optimism', 'avalanche'];
+export const ALCHEMY_EVM_CHAINS: Chain[] = ['ethereum', 'bsc', 'base', 'polygon', 'arbitrum', 'optimism', 'avalanche'];
 
 export function isEvmChain(chain: Chain): boolean {
   return chain !== 'solana' && chain !== 'tron';
