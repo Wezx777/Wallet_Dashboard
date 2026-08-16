@@ -15,6 +15,7 @@ const ALCHEMY_RPCS: Partial<Record<Chain, string>> = KEY
       arbitrum:  `https://arb-mainnet.g.alchemy.com/v2/${KEY}`,
       optimism:  `https://opt-mainnet.g.alchemy.com/v2/${KEY}`,
       avalanche: `https://avax-mainnet.g.alchemy.com/v2/${KEY}`,
+      robinhood: `https://robinhood-mainnet.g.alchemy.com/v2/${KEY}`,
     }
   : {};
 
@@ -54,6 +55,9 @@ const PUBLIC_RPCS: Partial<Record<Chain, string[]>> = {
     'https://mainnet.optimism.io',
     'https://optimism-rpc.publicnode.com',
     'https://1rpc.io/op',
+  ],
+  robinhood: [
+    'https://rpc.mainnet.chain.robinhood.com',
   ],
 };
 

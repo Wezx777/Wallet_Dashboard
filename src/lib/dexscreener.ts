@@ -16,6 +16,7 @@ const CHAIN_MAP: Record<string, string> = {
   optimism:  'optimism',
   avalanche: 'avalanche',
   tron:      'tron',
+  robinhood: 'robinhood',
 };
 
 // Batch query DexScreener for token metadata + prices.
