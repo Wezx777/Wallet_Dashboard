@@ -1,4 +1,4 @@
-export type Chain = 'ethereum' | 'solana' | 'bsc' | 'base' | 'polygon' | 'arbitrum' | 'optimism' | 'avalanche' | 'tron';
+export type Chain = 'ethereum' | 'solana' | 'bsc' | 'base' | 'polygon' | 'arbitrum' | 'optimism' | 'avalanche' | 'tron' | 'robinhood';
 export type Currency = 'USD' | 'EUR';
 export type Section = 'overview' | 'wallets' | 'tokens' | 'transactions';
 export type TxType = 'send' | 'receive' | 'swap' | 'contract' | 'topup';
