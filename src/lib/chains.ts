@@ -85,7 +85,7 @@ export const CHAIN_CONFIG = {
     icon: '◈',
     rpcLabel: 'Alchemy',
   },
-  tron: {
+tron: {
     name: 'Tron',
     symbol: 'TRX',
     chainId: null,
@@ -97,7 +97,19 @@ export const CHAIN_CONFIG = {
     icon: '◎',
     rpcLabel: 'TronGrid',
   },
-  solana: {
+  robinhood: {
+    name: 'Robinhood Chain',
+    symbol: 'ETH',
+    chainId: 4663,
+    decimals: 18,
+    explorer: 'https://robinhoodchain.blockscout.com',
+    coingeckoId: 'ethereum',
+    coingeckoPlatform: 'robinhood',
+    color: '#00C805',
+    icon: '★',
+    rpcLabel: 'Alchemy',
+  },
+    solana: {
     name: 'Solana',
     symbol: 'SOL',
     chainId: null,
@@ -143,7 +155,7 @@ export function detectChain(address: string): Chain | null {
 }
 
 // Chains using Alchemy EVM RPC (not covered by free Etherscan V2)
-export const ALCHEMY_EVM_CHAINS: Chain[] = ['ethereum', 'bsc', 'base', 'polygon', 'arbitrum', 'optimism', 'avalanche'];
+export const ALCHEMY_EVM_CHAINS: Chain[] = ['ethereum', 'bsc', 'base', 'polygon', 'arbitrum', 'optimism', 'avalanche', 'robinhood'];
 
 export function isEvmChain(chain: Chain): boolean {
   return chain !== 'solana' && chain !== 'tron';
@@ -171,5 +183,5 @@ export function getExplorerAddressUrl(chain: Chain, address: string): string {
   return `${cfg.explorer}/address/${address}`;
 }
 
-export const ALL_CHAINS: Chain[] = ['ethereum', 'bsc', 'base', 'polygon', 'arbitrum', 'optimism', 'avalanche', 'tron', 'solana'];
-export const EVM_CHAINS: Chain[] = ['ethereum', 'bsc', 'base', 'polygon', 'arbitrum', 'optimism', 'avalanche'];
+export const ALL_CHAINS: Chain[] = ['ethereum', 'bsc', 'base', 'polygon', 'arbitrum', 'optimism', 'avalanche', 'tron', 'solana', 'robinhood'];
+export const EVM_CHAINS: Chain[] = ['ethereum', 'bsc', 'base', 'polygon', 'arbitrum', 'optimism', 'avalanche', 'robinhood'];
